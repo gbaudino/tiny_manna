@@ -84,21 +84,17 @@ static unsigned int descargar(Manna_Array& h, Manna_Array& dh)
     return nroactivos;
 }
 
-int main()
-{
+int main() {
     srand(SEED);
     Manna_Array h, dh;
-    int activity;
-    int t = 0;
-    unsigned long long granos_procesados = 0;
+    unsigned int activity;
+    unsigned int t = 0;
     
     inicializacion(h);
     #ifdef DEBUG
     std::ofstream output_file("sand.dat");
     progreso(h, output_file);
     #endif
-
-    auto start = std::chrono::high_resolution_clock::now();
 
     desestabilizacion_inicial(h);
     #ifdef DEBUG
@@ -110,21 +106,8 @@ int main()
         #ifdef DEBUG
         progreso(h, output_file);
         #endif
-        granos_procesados += std::accumulate(h.begin(), h.end(), 0ULL);
         ++t;
     } while (activity > 0 && t < NSTEPS);
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    double granos_us = static_cast<double>(granos_procesados) / elapsed_us.count();
-
-    #ifdef DEBUG
-    auto elapsed_s = std::chrono::duration<double>(end - start);
-    std::cout << "Tiempo total: " << elapsed_s.count() << " segundos\n";
-    std::cout << "Granos: " << granos_procesados/1E6 << "M\n";
-    std::cout << (t == NSTEPS ? "Se terminó el tiempo" : "La actividad decayó a cero") << "\n";
-    #endif
-
-    std::cout << "Granos/µs: " << granos_us << "\n";
     return 0;
 }

@@ -4,7 +4,7 @@
 
 // number of sites
 #ifndef N
-#define N 4096
+#define N 16384
 #endif
 
 // number of sites
@@ -18,7 +18,7 @@
 #endif
 
 #ifndef SEED
-#define SEED 1//time(nullptr) // 1 if you want fixed seed
+#define SEED 1 //time(nullptr) // 1 if you want fixed seed
 #endif
 
 // #ifndef DEBUG

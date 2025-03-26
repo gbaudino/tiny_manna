@@ -4,8 +4,8 @@ CXX ?= clang++
 RUNS ?= 5
 
 # Default Flags
-OPTFLAGS ?= -O3 -march=native -ffast-math -funroll-loops -flto
-CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++23
+OPTFLAGS ?= -O3 -march=native
+CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++17
 CPPFLAGS =
 LDFLAGS =
 
@@ -21,7 +21,7 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
-	rm -f $(TARGET) *.o *.dat
+	rm -f $(TARGET) *.o *.dat $(TARGET).s $(TARGET).ii $(TARGET).gcda $(TARGET).bc $(TARGET).l* $(TARGET).r* $(TARGET).w*
 
 .PHONY: run perf
 
