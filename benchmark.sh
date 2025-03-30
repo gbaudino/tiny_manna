@@ -37,6 +37,7 @@ FLAGS_LIST=(
   "-O3 -march=native"
  #"-Ofast"
   "-O3 -funroll-loops"
+  "-O3 -ffast-math"
 )
 
 # Encabezado del archivo CSV

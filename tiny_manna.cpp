@@ -2,11 +2,18 @@
 
 #include <array>
 #include <cstdlib>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <numeric>
 #include <chrono>
+#include <random>
+
+static std::minstd_rand rng(SEED);
+static inline uint_fast8_t fast_rand() {
+    return rng() & 1;
+}
 
 typedef std::array<int, N> Manna_Array;
 
@@ -43,7 +50,7 @@ static void desestabilizacion_inicial(Manna_Array& h)
     for (int i = 0; i < N; ++i) {
         if (h[i] == 1) {
             h[i] = 0;
-            int j = i + 2 * (rand() % 2) - 1; // izquierda o derecha
+            int j = i + 2 * fast_rand() - 1; // izquierda o derecha
 
             if (j == N) {
                 j = 0;
@@ -68,7 +75,7 @@ static unsigned int descargar(Manna_Array& h, Manna_Array& dh, unsigned long lon
     for (int i = 0; i < N; ++i) {
         if (h[i] > 1) {
             for (int j = 0; j < h[i]; ++j) {
-                int k = (i + 2 * (rand() % 2) - 1 + N) % N;
+                int k = (i + 2 * fast_rand() - 1 + N) % N;
                 ++dh[k];
             }
             granos_procesados += h[i];
@@ -86,7 +93,6 @@ static unsigned int descargar(Manna_Array& h, Manna_Array& dh, unsigned long lon
 }
 
 int main() {
-    srand(SEED);
     Manna_Array h, dh;
     unsigned int activity;
     unsigned int t = 0;
