@@ -1,5 +1,3 @@
-benchmarks/*
-tasks.md
 *.o
 tiny_manna
 *.tmp

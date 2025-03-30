@@ -23,8 +23,8 @@ static void inicializacion(Manna_Array& h)
 #ifdef DEBUG
 static void progreso(const Manna_Array& h, std::ostream& output_file = std::cout)
 {
-    int granos = 0;
-    int granos_activos = 0;
+    uint granos = 0;
+    uint granos_activos = 0;
 
     for (int i = 0; i < N; ++i) {
         output_file << h[i] << " ";
@@ -61,7 +61,7 @@ static void desestabilizacion_inicial(Manna_Array& h)
 
 
 // DESCARGA DE ACTIVOS Y UPDATE --------------------------------------------------------
-static unsigned int descargar(Manna_Array& h, Manna_Array& dh)
+static unsigned int descargar(Manna_Array& h, Manna_Array& dh, unsigned long long int& granos_procesados)
 {
     dh.fill(0);
 
@@ -71,6 +71,7 @@ static unsigned int descargar(Manna_Array& h, Manna_Array& dh)
                 int k = (i + 2 * (rand() % 2) - 1 + N) % N;
                 ++dh[k];
             }
+            granos_procesados += h[i];
             h[i] = 0;
         }
     }
@@ -89,6 +90,7 @@ int main() {
     Manna_Array h, dh;
     unsigned int activity;
     unsigned int t = 0;
+    unsigned long long int granos_procesados = 0;
     
     inicializacion(h);
     #ifdef DEBUG
@@ -102,12 +104,13 @@ int main() {
     #endif
 
     do {
-        activity = descargar(h, dh);
+        activity = descargar(h, dh, granos_procesados);
         #ifdef DEBUG
         progreso(h, output_file);
         #endif
         ++t;
     } while (activity > 0 && t < NSTEPS);
 
+    std::cout << "Granos procesados: " << granos_procesados << "\n";
     return 0;
 }

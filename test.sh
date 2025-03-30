@@ -28,7 +28,7 @@ sed -i "s/^#define N .*/#define N $N/" params.h
 
 # Prepare results file
 RESULTS_FILE="$RESULTS_DIR/${CXX}_${N}.csv"
-echo "N,Compiler,Flags,Best_Grains/µs,Total_Time(s),Memory_KB" > $RESULTS_FILE
+echo "N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB" > $RESULTS_FILE
 
 # Clean and compile
 make clean > /dev/null 2>&1
@@ -46,7 +46,7 @@ echo " - Runs: $RUNS"
 echo " - Compiler: $CXX"
 echo " - Flags: $FLAGS"
 
-BEST_IPS=0
+BEST_GRAINS_PER_US=0
 BEST_TIME=99999
 BEST_MEM=999999999
 
@@ -56,14 +56,14 @@ for ((j=1; j<=RUNS; j++)); do
     OUTPUT=$(perf stat -e instructions /usr/bin/time -v ./tiny_manna 2>&1)
 
     EXEC_TIME=$(echo "$OUTPUT" | grep "seconds time elapsed" | awk '{print $1}' | sed 's/,/./')
-    INSTRUCTIONS=$(echo "$OUTPUT" | grep "instructions" | awk '{print $1}' | tr -d '.')
     MEM_USED=$(echo "$OUTPUT" | grep "Maximum resident set size" | awk '{print $6}')
-    M_IPS=$(echo "scale=5; $INSTRUCTIONS / $EXEC_TIME / 1000000" | bc -l)
+    GRAINS=$(echo "$OUTPUT" | grep "Granos procesados:" | awk '{print $3}')
+    GRAINS_PER_US=$(echo "scale=5; $GRAINS / ($EXEC_TIME * 1000000)" | bc -l)
     
-    echo "Instructions: $INSTRUCTIONS | IPS: $M_IPS M | Time: $EXEC_TIME s | Memory: ${MEM_USED} KB"
+    echo " Grains: $GRAINS | Grains/µs: $GRAINS_PER_US | Time: $EXEC_TIME s | Memory: ${MEM_USED} KB"
     
-    if (( $(echo "$M_IPS > $BEST_IPS" | bc -l) )); then
-        BEST_IPS=$M_IPS
+    if (( $(echo "$GRAINS_PER_US > $BEST_GRAINS_PER_US" | bc -l) )); then
+        BEST_GRAINS_PER_US=$GRAINS_PER_US
     fi
     
     if (( $(echo "$EXEC_TIME < $BEST_TIME" | bc -l) )); then
@@ -73,14 +73,15 @@ for ((j=1; j<=RUNS; j++)); do
     if (( MEM_USED < BEST_MEM )); then
         BEST_MEM=$MEM_USED
     fi
+    
 done
 
 # Write results to CSV
-echo "$N,$CXX,\"$FLAGS\",$BEST_IPS,$BEST_TIME,$BEST_MEM" >> $RESULTS_FILE
+echo "$N,$CXX,\"$FLAGS\",$BEST_GRAINS_PER_US,$BEST_TIME,$BEST_MEM" >> $RESULTS_FILE
 
 # Display final results
 echo -e "\nBest results:"
-echo " - IPS: $BEST_IPS M"
+echo " - Grains/µs: $BEST_GRAINS_PER_US"
 echo " - Total Time (s): $BEST_TIME"
 echo " - Memory (KB): $BEST_MEM"
 echo -e "\nResults saved in $RESULTS_FILE"

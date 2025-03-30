@@ -1,10 +1,8 @@
 # Compiler
-CXX ?= clang++
-
-RUNS ?= 5
+CXX ?= g++
 
 # Default Flags
-OPTFLAGS ?= -O3 -march=native
+OPTFLAGS ?= -g
 CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++17
 CPPFLAGS =
 LDFLAGS =
@@ -29,4 +27,5 @@ run: $(TARGET)
 	./$(TARGET)
 
 perf: $(TARGET)
-	perf stat -r $(RUNS) ./$(TARGET)
+	perf record -F 1000 -g -- ./$(TARGET)
+	perf report -i perf.data
