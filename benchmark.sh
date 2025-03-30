@@ -76,11 +76,13 @@ for N_RUNS in "${N_RUNS_ARRAY[@]}"; do
       for ((j=1; j<=$RUNS; j++)); do
         echo -n "Ejecución $j/$RUNS... "
         
-        OUTPUT=$(perf stat -e instructions /usr/bin/time -v ./tiny_manna 2>&1)
+        START_TIME=$(date +%s.%N)
+        OUTPUT=$(./tiny_manna 2>&1)
+        END_TIME=$(date +%s.%N)
         
-        EXEC_TIME=$(echo "$OUTPUT" | grep "seconds time elapsed" | awk '{print $1}' | sed 's/,/./')
-        MEM_USED=$(echo "$OUTPUT" | grep "Maximum resident set size" | awk '{print $6}')
-        GRAINS=$(echo "$OUTPUT" | grep "Granos activos:" | awk '{print $3}')
+        EXEC_TIME=$(echo "scale=4; $END_TIME - $START_TIME" | bc -l)
+        MEM_USED=$(ps -o rss= -p $$ | tr -d ' ')
+        GRAINS=$(echo "$OUTPUT" | grep "Granos procesados:" | awk '{print $3}')
         GRAINS_PER_US=$(echo "scale=5; $GRAINS / ($EXEC_TIME * 1000000)" | bc -l)
         
         echo " Grains: $GRAINS | Grains/µs: $GRAINS_PER_US | Time: $EXEC_TIME s | Memory: ${MEM_USED} KB"
