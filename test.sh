@@ -53,14 +53,13 @@ BEST_MEM=999999999
 for ((j=1; j<=RUNS; j++)); do
     echo -n "Run $j/$RUNS... "
 
-    OUTPUT=$(perf stat -e instructions /usr/bin/time -v ./tiny_manna 2>&1)
+    OUTPUT=$(./tiny_manna 2>&1)
 
-    EXEC_TIME=$(echo "$OUTPUT" | grep "seconds time elapsed" | awk '{print $1}' | sed 's/,/./')
-    MEM_USED=$(echo "$OUTPUT" | grep "Maximum resident set size" | awk '{print $6}')
-    GRAINS=$(echo "$OUTPUT" | grep "Granos procesados:" | awk '{print $3}')
-    GRAINS_PER_US=$(echo "scale=5; $GRAINS / ($EXEC_TIME * 1000000)" | bc -l)
+    EXEC_TIME=$(echo "$OUTPUT" | grep "Tiempo de procesamiento" | awk '{print $5}')
+    GRAINS_PER_US=$(echo "$OUTPUT" | grep "Granos/us" | awk '{print $2}')
+    MEM_USED=$(ps -o rss= -p $$ | tr -d ' ')
     
-    echo " Grains: $GRAINS | Grains/µs: $GRAINS_PER_US | Time: $EXEC_TIME s | Memory: ${MEM_USED} KB"
+    echo " Grains/µs: $GRAINS_PER_US | Time: $EXEC_TIME s | Memory: ${MEM_USED} KB"
     
     if (( $(echo "$GRAINS_PER_US > $BEST_GRAINS_PER_US" | bc -l) )); then
         BEST_GRAINS_PER_US=$GRAINS_PER_US

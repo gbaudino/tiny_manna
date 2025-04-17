@@ -4,12 +4,12 @@
 
 // number of sites
 #ifndef N
-#define N 16384
+#define N 65536
 #endif
 
 // number of sites
 #ifndef DENSITY
-#define DENSITY 0.8924
+#define DENSITY 0.89
 #endif
 
 // number of temporal steps

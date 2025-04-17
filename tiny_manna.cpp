@@ -8,6 +8,7 @@
 #include <numeric>
 #include <chrono>
 
+
 typedef std::array<int, N> Manna_Array;
 
 
@@ -86,7 +87,8 @@ static unsigned int descargar(Manna_Array& h, Manna_Array& dh, unsigned long lon
 }
 
 int main() {
-    srand(SEED);
+    auto start = std::chrono::high_resolution_clock::now();
+    std::srand(SEED);
     Manna_Array h, dh;
     unsigned int activity;
     unsigned int t = 0;
@@ -110,7 +112,12 @@ int main() {
         #endif
         ++t;
     } while (activity > 0 && t < NSTEPS);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
+    std::cout << "Tiempo de procesamiento (s): " << duration.count() / 1e6 << "\n";
     std::cout << "Granos procesados: " << granos_procesados << "\n";
+    std::cout << "Granos/us: " << static_cast<double>(granos_procesados) / duration.count() << "\n";
     return 0;
 }

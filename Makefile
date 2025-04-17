@@ -2,7 +2,7 @@
 CXX ?= g++
 
 # Default Flags
-OPTFLAGS ?= -g
+OPTFLAGS ?= -g -O2
 CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++17
 CPPFLAGS =
 LDFLAGS =
@@ -29,3 +29,11 @@ run: $(TARGET)
 perf: $(TARGET)
 	perf record -F 1000 -g -- ./$(TARGET)
 	perf report -i perf.data
+
+force: clean $(TARGET)
+
+clang: 
+	make $(TARGET) CXX=clang++
+
+perf_file: force
+	perf stat -r 4 -o performance.txt --append -e cache-references,cache-misses,instructions,cycles,task-clock ./$(TARGET)
