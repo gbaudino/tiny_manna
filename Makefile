@@ -21,19 +21,26 @@ $(TARGET): $(OBJS)
 clean:
 	rm -f $(TARGET) *.o *.dat $(TARGET).s $(TARGET).ii $(TARGET).gcda $(TARGET).bc $(TARGET).l* $(TARGET).r* $(TARGET).w*
 
-.PHONY: run perf
+clean_old:
+	rm -f old_$(TARGET) *.o *.dat old_$(TARGET).s old_$(TARGET).ii old_$(TARGET).gcda old_$(TARGET).bc old_$(TARGET).l* old_$(TARGET).r* old_$(TARGET).w*
+
+.PHONY: run perf force clang
 
 run: $(TARGET)
 	./$(TARGET)
 
-perf: $(TARGET)
-	perf record -F 1000 -g -- ./$(TARGET)
-	perf report -i perf.data
+run_old: old_$(TARGET)
+	./old_$(TARGET)
 
 force: clean $(TARGET)
 
-clang: 
+perf: force
+	perf record -F 1000 -g -- ./$(TARGET)
+	perf report -i perf.data
+
+clang: clean
 	make $(TARGET) CXX=clang++
+	./$(TARGET)
 
 perf_file: force
 	perf stat -r 4 -o performance.txt --append -e cache-references,cache-misses,instructions,cycles,task-clock ./$(TARGET)

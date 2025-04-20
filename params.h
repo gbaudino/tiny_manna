@@ -4,12 +4,12 @@
 
 // number of sites
 #ifndef N
-#define N 65536
+#define N 8192
 #endif
 
 // number of sites
 #ifndef DENSITY
-#define DENSITY 0.89
+#define DENSITY 0.8924
 #endif
 
 // number of temporal steps
@@ -18,7 +18,7 @@
 #endif
 
 #ifndef SEED
-#define SEED 1 //time(nullptr) // 1 if you want fixed seed
+#define SEED 1 // time(nullptr) // 1 if you want fixed seed
 #endif
 
 // #ifndef DEBUG

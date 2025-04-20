@@ -2,25 +2,18 @@
 
 #include <array>
 #include <cstdlib>
-#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <numeric>
 #include <chrono>
-#include <random>
-#include <cstring>
 
-static std::minstd_rand rng(SEED);
-static inline bool fast_rand() {
-    return rng() & 1;
-}
 
-typedef unsigned short int Manna_Array[N];
+typedef std::array<int, N> Manna_Array;
 
 
 // CONDICION INICIAL ---------------------------------------------------------------
-static void inicializacion(Manna_Array& __restrict__ h)
+static void inicializacion(Manna_Array& h)
 {
     for (int i = 0; i < N; ++i) {
         h[i] = static_cast<int>((i + 1) * DENSITY) - static_cast<int>(i * DENSITY);
@@ -29,7 +22,7 @@ static void inicializacion(Manna_Array& __restrict__ h)
 
 
 #ifdef DEBUG
-static void progreso(const Manna_Array& __restrict__ h, std::ostream& __restrict__ output_file = std::cout)
+static void progreso(const Manna_Array& h, std::ostream& output_file = std::cout)
 {
     uint granos = 0;
     uint granos_activos = 0;
@@ -45,13 +38,13 @@ static void progreso(const Manna_Array& __restrict__ h, std::ostream& __restrict
 
 
 // CONDICION INICIAL ---------------------------------------------------------------
-static void desestabilizacion_inicial(Manna_Array& __restrict__ h)
+static void desestabilizacion_inicial(Manna_Array& h)
 {
-    std::vector<unsigned short int> index_a_incrementar;
+    std::vector<int> index_a_incrementar;
     for (int i = 0; i < N; ++i) {
         if (h[i] == 1) {
             h[i] = 0;
-            int j = i + 2 * fast_rand() - 1; // izquierda o derecha
+            int j = i + 2 * (rand() % 2) - 1; // izquierda o derecha
 
             if (j == N) {
                 j = 0;
@@ -62,21 +55,21 @@ static void desestabilizacion_inicial(Manna_Array& __restrict__ h)
             index_a_incrementar.push_back(j);
         }
     }
-    for (uint i = 0; i < index_a_incrementar.size(); ++i) {
+    for (unsigned int i = 0; i < index_a_incrementar.size(); ++i) {
         h[index_a_incrementar[i]] += 1;
     }
 }
 
 
 // DESCARGA DE ACTIVOS Y UPDATE --------------------------------------------------------
-static unsigned short int descargar(Manna_Array& __restrict__ h, Manna_Array& __restrict__ dh, uint_fast32_t& __restrict__ granos_procesados)
+static unsigned int descargar(Manna_Array& h, Manna_Array& dh, unsigned long long int& granos_procesados)
 {
-    memset(dh, 0, N * sizeof(unsigned short int));
+    dh.fill(0);
 
-    for (uint_fast16_t i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i) {
         if (h[i] > 1) {
-            for (uint_fast8_t j = 0; j < h[i]; ++j) {
-                uint_fast16_t k = (i + 2 * fast_rand() - 1 + N) % N;
+            for (int j = 0; j < h[i]; ++j) {
+                int k = (i + 2 * (rand() % 2) - 1 + N) % N;
                 ++dh[k];
             }
             granos_procesados += h[i];
@@ -84,8 +77,8 @@ static unsigned short int descargar(Manna_Array& __restrict__ h, Manna_Array& __
         }
     }
 
-    uint_fast16_t nroactivos = 0;
-    for (uint_fast16_t i = 0; i < N; ++i) {
+    unsigned int nroactivos = 0;
+    for (int i = 0; i < N; ++i) {
         h[i] += dh[i];
         nroactivos += (h[i] > 1);
     }
@@ -95,10 +88,11 @@ static unsigned short int descargar(Manna_Array& __restrict__ h, Manna_Array& __
 
 int main() {
     auto start = std::chrono::high_resolution_clock::now();
+    std::srand(SEED);
     Manna_Array h, dh;
-    unsigned short int activity;
-    uint_fast32_t t = 0;
-    uint_fast32_t granos_procesados = 0;
+    unsigned int activity;
+    unsigned int t = 0;
+    unsigned long long int granos_procesados = 0;
     
     inicializacion(h);
     #ifdef DEBUG
