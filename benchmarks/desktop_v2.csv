@@ -1,14 +1,4 @@
 N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB
-512,g++,"",20.7053,0.005647,3712
-512,g++,"-O3 -march=native -funroll-loops",97.2737,0.001202,3712
-512,g++," -Ofast -march=native -funroll-loops -ffast-math",107.565,0.001087,3712
-512,clang++,"",19.9527,0.00586,3712
-512,clang++," -O2",113.738,0.001028,3712
-512,clang++," -O3 -march=native -funroll-loops -ffast-math",119.431,0.000979,3712
-512,icpx,"",95.5253,0.001224,3712
-512,icpx," -xHost -O3",122.818,0.000952,3712
-512,nvc++,"",25.1556,0.004648,3712
-512,nvc++," -O3",108.766,0.001075,3712
 1024,g++,"",15.9656,0.447016,3712
 1024,g++,"-O3 -march=native -funroll-loops",67.791,0.105278,3712
 1024,g++," -Ofast -march=native -funroll-loops -ffast-math",97.0122,0.073567,3712
@@ -59,8 +49,6 @@ N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB
 16384,icpx," -xHost -O3",57.6549,1.31507,3712
 16384,nvc++,"",6.99136,10.8448,3712
 16384,nvc++," -O3",44.3051,1.71132,3712
-512,g++," -O3 -march=native -funroll-loops",97.4358,0.0012,3584
-512,icpx,"-xHost -O3",123.859,0.000944,3584
 1024,g++," -O3 -march=native -funroll-loops",67.4437,0.10582,3584
 1024,icpx,"-xHost -O3",108.894,0.06554,3584
 2048,g++," -O3 -march=native -funroll-loops",62.911,0.141066,3584

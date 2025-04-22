@@ -1,8 +1,8 @@
 # Compiler
-CXX ?= g++
+CXX ?= clang++
 
 # Default Flags
-OPTFLAGS ?= -g -O2
+OPTFLAGS ?= -g -O3 -mavx2 -fvectorize -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize -fopenmp
 CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++17
 CPPFLAGS =
 LDFLAGS =
@@ -43,4 +43,4 @@ clang: clean
 	./$(TARGET)
 
 perf_file: force
-	perf stat -r 4 -o performance.txt --append -e cache-references,cache-misses,instructions,cycles,task-clock ./$(TARGET)
+	perf stat -r 3 -o performance.txt --append -e cache-references,cache-misses,instructions,cycles,task-clock ./$(TARGET)
