@@ -14,11 +14,11 @@
 
 // number of temporal steps
 #ifndef NSTEPS
-#define NSTEPS 1000000
+#define NSTEPS 1000000u
 #endif
 
 #ifndef SEED
-#define SEED 1 // time(nullptr) // 1 if you want fixed seed
+#define SEED 1u // time(nullptr) // 1 if you want fixed seed
 #endif
 
 // #ifndef DEBUG

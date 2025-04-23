@@ -2,7 +2,7 @@
 CXX ?= clang++
 
 # Default Flags
-OPTFLAGS ?= -g -O3 -mavx2 -fvectorize -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize -fopenmp
+OPTFLAGS ?= -O2 -march=native
 CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++17
 CPPFLAGS =
 LDFLAGS =
