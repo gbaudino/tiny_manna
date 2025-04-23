@@ -17,7 +17,7 @@ typedef uint32_t MannaSizeType;
 #define AVX_WIDTH 8u
 #endif
 
-typedef std::array<MannaSizeType, N> Manna_Array;
+typedef MannaSizeType Manna_Array[N];
 
 // global state for xorshift rng
 static uint32_t xrng_state = 0xdeadbeef;
@@ -111,7 +111,7 @@ static void desestabilizacion_inicial(Manna_Array &__restrict__ h)
 // DESCARGA DE ACTIVOS Y UPDATE --------------------------------------------------------
 static MannaSizeType descargar(Manna_Array &__restrict__ h, Manna_Array &__restrict__ dh, uint32_t &__restrict__ granos_procesados)
 {
-    dh.fill(0u);
+    std::memset(dh, 0, sizeof(Manna_Array));
 
     for (MannaSizeType i = 0u; i < N; ++i)
     {
