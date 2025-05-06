@@ -24,7 +24,6 @@ N_RUNS_ARRAY=(
 # Lista de compiladores y flags combinados
 COMPILER_FLAGS_LIST=(
   "g++: -O3 -march=native -funroll-loops"
-  "g++: -Ofast -march=native -funroll-loops -ffast-math"
   "clang++: -O2"
   "clang++: -O3 -march=native -funroll-loops -ffast-math -funroll-loops"
   "icpx: -xHost -O3 -mavx2"
@@ -60,21 +59,20 @@ for N_RUNS in "${N_RUNS_ARRAY[@]}"; do
       continue
     fi
 
-    echo "Compilando con $CXX y flags: $FLAGS"
-    make clean > /dev/null 2>&1
-    OPTFLAGS="$FLAGS" CXX=$CXX make > /dev/null 2>&1
-
-    if [ ! -f tiny_manna ]; then
-      echo "Error compilando con $CXX y flags $FLAGS, omitiendo..."
-      continue
-    fi
-
-    echo "Ejecutando $RUNS veces..."
     BEST_GRAINS_PER_US=0
     BEST_TIME=99999
     BEST_MEM=999999999
 
     for ((j=1; j<=$RUNS; j++)); do
+      echo "Compilando con $CXX y flags: $FLAGS (Ejecución $j/$RUNS)"
+      make clean > /dev/null 2>&1
+      OPTFLAGS="$FLAGS" CXX=$CXX make > /dev/null 2>&1
+
+      if [ ! -f tiny_manna ]; then
+        echo "Error compilando con $CXX y flags $FLAGS, omitiendo..."
+        continue
+      fi
+
       echo -n "Ejecución $j/$RUNS... "
 
       OUTPUT=$(./tiny_manna 2>&1)
