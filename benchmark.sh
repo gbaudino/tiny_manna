@@ -12,20 +12,20 @@ RESULTS_FILE="$RESULTS_DIR/${DEVICE}_${OPTIMIZATION}.csv"
 
 # Definir array de valores N a probar y sus respectivas cantidades de ejecuciones
 N_RUNS_ARRAY=(
-  "1024:4"
-  "2048:4"
   "4096:4"
-  "8192:2"
-  "16384:1"
-  "32768:1"
+  "8192:4"
+  "16384:2"
+  "32768:2"
   "65536:1"
+  "131072:1"
+  "262144:1"
 )
 
 # Lista de compiladores y flags combinados
 COMPILER_FLAGS_LIST=(
   "g++: -O3 -march=native -funroll-loops"
   "clang++: -O2"
-  "clang++: -O3 -march=native -funroll-loops -ffast-math -funroll-loops"
+  "clang++: -O3 -march=native -funroll-loops -ffast-math"
   "icpx: -xHost -O3 -mavx2"
 )
 

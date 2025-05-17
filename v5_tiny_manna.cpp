@@ -178,7 +178,7 @@ static bool descargar(Manna_Array &__restrict__ h,
         std::memmove(lh, lh+1, (N-1)*sizeof(MannaItemType)); lh[N-1]=first_l;
     }
 
-    // 5) Reconstruccion - Autovectorizado
+    // 5) Reconstruccion
     for (MannaSizeType i=0;i<N;++i) {
         h[i] = lh[i] + rh[i] + (h[i]==1u ? 1u:0u);
     }
@@ -191,7 +191,7 @@ static bool descargar(Manna_Array &__restrict__ h,
         any_active    = _mm256_or_si256(any_active, mask);
     }
 
-    // true si hay alguna lane activa
+    // devuelve true si hay alguna lane activa
     return !_mm256_testz_si256(any_active, any_active);
 }
 
@@ -224,7 +224,7 @@ int main() {
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "Pasos: " << t << "\n";
+    std::cout << "Steps taken: " << t << "\n";
     std::cout << "Tiempo de procesamiento (s): " << static_cast<double>(duration.count()) / 1e6 << "\n";
     std::cout << "Granos procesados: " << processed << "\n";
     std::cout << "Granos/us: " << static_cast<double>(processed) / duration.count() << "\n";

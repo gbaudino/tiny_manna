@@ -64,15 +64,17 @@ static inline __m256i popcount_byte_avx2(__m256i x) {
     return _mm256_add_epi8(cnt_lo, cnt_hi);
 }
 
-// CONDICION INICIAL ---------------------------------------------------------------
-static void inicializacion(Manna_Array &__restrict__ h) {
-    for (MannaSizeType i = 0u; i < N; ++i) {
+static void inicializacion(Manna_Array &__restrict__ h)
+{
+    for (MannaSizeType i = 0u; i < N; ++i)
+    {
         h[i] = static_cast<MannaSizeType>((i + 1) * DENSITY) - static_cast<MannaSizeType>(i * DENSITY);
     }
 }
 
 #ifdef DEBUG
-static void progreso(const Manna_Array &__restrict__ h, std::ostream &__restrict__ output_file = std::cout) {
+static void progreso(const Manna_Array &__restrict__ h, std::ostream &__restrict__ output_file = std::cout)
+{
     uint32_t granos = 0u;
     uint32_t granos_activos = 0u;
     uint16_t max = 0u;
@@ -91,30 +93,34 @@ static void progreso(const Manna_Array &__restrict__ h, std::ostream &__restrict
 }
 #endif
 
-static void desestabilizacion_inicial(Manna_Array &__restrict__ h) {
+
+static void desestabilizacion_inicial(Manna_Array &__restrict__ h)
+{
     std::vector<MannaSizeType> index_a_incrementar;
-    for (MannaSizeType i = 0u; i < N; ++i) {
-        if (h[i] == 1) {
+    for (MannaSizeType i = 0u; i < N; ++i)
+    {
+        if (h[i] == 1)
+        {
             h[i] = 0u;
             MannaSizeType j = (i + 2u * xrng_next_bit_idx(0) - 1u) & (N - 1u);
             index_a_incrementar.push_back(j);
         }
     }
-    for (MannaSizeType i = 0u; i < index_a_incrementar.size(); ++i) {
+    for (MannaSizeType i = 0u; i < index_a_incrementar.size(); ++i)
+    {
         h[index_a_incrementar[i]] += 1u;
     }
 }
 
 
-static bool descargar(Manna_Array &__restrict__ h,
-                      Manna_Array &__restrict__ lh,
-                      Manna_Array &__restrict__ rh,
-                      uint32_t &__restrict__ processed)
+static MannaSizeType descargar(Manna_Array &__restrict__ h,
+                               Manna_Array &__restrict__ lh,
+                               Manna_Array &__restrict__ rh,
+                               uint32_t &__restrict__ processed)
 {
     // 1) Inicializo acumuladores
     std::memset(lh, 0, sizeof(Manna_Array));
     std::memset(rh, 0, sizeof(Manna_Array));
-    __m256i v_acc_processed = _mm256_setzero_si256();
 
     // 2) Vectorizado de 32 elementos de 8 bits
     for (MannaSizeType i = 0; i < N; i += VEC_WIDTH) {
@@ -156,21 +162,16 @@ static bool descargar(Manna_Array &__restrict__ h,
         _mm256_storeu_si256((__m256i*)&rh[i], right_cnt);
 
         // k) Acumulo granos procesados
-        {
-            __m256i total = _mm256_add_epi8(left_cnt, right_cnt);
-            __m256i sums  = _mm256_sad_epu8(total, _mm256_setzero_si256());
-            v_acc_processed = _mm256_add_epi64(v_acc_processed, sums);
-        }
+        __m256i pop_vec = _mm256_add_epi8(left_cnt, right_cnt);
+        __m256i sums = _mm256_sad_epu8(pop_vec, _mm256_setzero_si256());
+        uint64_t chunk = _mm256_extract_epi64(sums, 0)
+                       + _mm256_extract_epi64(sums, 1)
+                       + _mm256_extract_epi64(sums, 2)
+                       + _mm256_extract_epi64(sums, 3);
+        processed += chunk;
     }
 
-    // 3) Acumulo granos procesados
-    {
-        uint64_t buf[4];
-        _mm256_storeu_si256((__m256i*)buf, v_acc_processed);
-        processed += uint32_t(buf[0] + buf[1] + buf[2] + buf[3]);
-    }
-
-    // 4) Condiciones de frontera periodicas
+    // 3) Condiciones de frontera periodicas
     {
         uint8_t last_r = rh[N-1];
         std::memmove(rh+1, rh, (N-1)*sizeof(MannaItemType)); rh[0]=last_r;
@@ -178,28 +179,20 @@ static bool descargar(Manna_Array &__restrict__ h,
         std::memmove(lh, lh+1, (N-1)*sizeof(MannaItemType)); lh[N-1]=first_l;
     }
 
-    // 5) Reconstruccion - Autovectorizado
+    // 4) Reconstruccion y cuenta actividad
+    MannaSizeType activity=0;
     for (MannaSizeType i=0;i<N;++i) {
         h[i] = lh[i] + rh[i] + (h[i]==1u ? 1u:0u);
+        activity += (h[i]>1u);
     }
-
-    // 6) Deteccion de actividad
-    __m256i any_active = _mm256_setzero_si256();
-    for (MannaSizeType i = 0; i < N; i += VEC_WIDTH) {
-        __m256i h_vec = _mm256_load_si256((__m256i*)(h + i));
-        __m256i mask  = _mm256_cmpgt_epi8(h_vec, one);
-        any_active    = _mm256_or_si256(any_active, mask);
-    }
-
-    // true si hay alguna lane activa
-    return !_mm256_testz_si256(any_active, any_active);
+    return activity;
 }
 
 int main() {
     auto start = std::chrono::high_resolution_clock::now();
     xrng256_init(SEED);
     alignas(32) Manna_Array h, lh, rh;
-    bool activity;
+    MannaSizeType activity;
     uint32_t t = 0u;
     uint32_t processed = 0u;
 
@@ -220,11 +213,11 @@ int main() {
         progreso(h, output_file);
         #endif
         ++t;
-    } while (t < NSTEPS && activity);
+    } while (t < NSTEPS && activity > 0u);
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "Pasos: " << t << "\n";
+    std::cout << "Steps taken: " << t << "\n";
     std::cout << "Tiempo de procesamiento (s): " << static_cast<double>(duration.count()) / 1e6 << "\n";
     std::cout << "Granos procesados: " << processed << "\n";
     std::cout << "Granos/us: " << static_cast<double>(processed) / duration.count() << "\n";
