@@ -2,7 +2,7 @@
 CXX ?= clang++
 
 # Default Flags
-OPTFLAGS ?= -O3 -march=native -mavx2 -g -fno-omit-frame-pointer
+OPTFLAGS ?= -O3 -march=native -mavx2 -g -fno-omit-frame-pointer -fopenmp
 CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++17
 CPPFLAGS =
 LDFLAGS =

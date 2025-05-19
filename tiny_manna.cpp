@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstring>
 #include <immintrin.h>
+#include <omp.h>
 
 #if N < 65536u
 typedef uint16_t MannaSizeType;
@@ -66,6 +67,7 @@ static inline __m256i popcount_byte_avx2(__m256i x) {
 
 // CONDICION INICIAL ---------------------------------------------------------------
 static void inicializacion(Manna_Array &__restrict__ h) {
+    #pragma omp parallel for schedule(static)
     for (MannaSizeType i = 0u; i < N; ++i) {
         h[i] = static_cast<MannaSizeType>((i + 1) * DENSITY) - static_cast<MannaSizeType>(i * DENSITY);
     }
@@ -96,7 +98,7 @@ static void desestabilizacion_inicial(Manna_Array &__restrict__ h) {
     for (MannaSizeType i = 0u; i < N; ++i) {
         if (h[i] == 1) {
             h[i] = 0u;
-            MannaSizeType j = (i + 2u * xrng_next_bit_idx(0) - 1u) & (N - 1u);
+            MannaSizeType j = (i + 2u * xrng_next_bit() - 1u) & (N - 1u);
             index_a_incrementar.push_back(j);
         }
     }
@@ -106,100 +108,160 @@ static void desestabilizacion_inicial(Manna_Array &__restrict__ h) {
 }
 
 
-static bool descargar(Manna_Array &__restrict__ h,
-                      Manna_Array &__restrict__ lh,
-                      Manna_Array &__restrict__ rh,
-                      uint32_t &__restrict__ processed)
+// Descarga paralelizada
+// static bool descargar(Manna_Array &h,
+//                       Manna_Array &lh,
+//                       Manna_Array &rh,
+//                       uint32_t  &processed)
+// {
+//     // buffers y contadores
+//     std::memset(lh,0,sizeof(h));
+//     std::memset(rh,0,sizeof(h));
+
+//     // flag de actividad global y suma de granos
+//     bool any_active = false;
+
+//     #pragma omp parallel
+//     {
+//         // acumulador de granos por hilo
+//         __m256i v_acc = _mm256_setzero_si256();
+//         bool local_active = false;
+
+//         // cada hilo procesa un tramo
+//         #pragma omp for schedule(static) nowait
+//         for (MannaSizeType i = 0; i < N; i += VEC_WIDTH) {
+//             // 1) carga
+//             __m256i h_vec = _mm256_loadu_si256((__m256i*)(h + i));
+//             __m256i active = _mm256_cmpgt_epi8(h_vec, one);
+//             // RNG
+//             __m256i rnd_lo = xrng256_next();
+//             __m256i rnd_hi = xrng256_next();
+//             // vectores
+//             __m256i hi_idx  = _mm256_subs_epu8(h_vec, v8);
+//             __m256i mask_lo = _mm256_shuffle_epi8(lo_tbl256, h_vec);
+//             __m256i mask_hi = _mm256_shuffle_epi8(hi_tbl256, hi_idx);
+//             __m256i used_lo = _mm256_and_si256(rnd_lo, mask_lo);
+//             __m256i used_hi = _mm256_and_si256(rnd_hi, mask_hi);
+//             __m256i pop_lo  = popcount_byte_avx2(used_lo);
+//             __m256i pop_hi  = popcount_byte_avx2(used_hi);
+//             __m256i left_cnt  = _mm256_and_si256(_mm256_add_epi8(pop_lo,pop_hi), active);
+//             __m256i right_cnt = _mm256_and_si256(_mm256_sub_epi8(h_vec,left_cnt), active);
+//             // guarda
+//             _mm256_storeu_si256((__m256i*)(lh + i), left_cnt);
+//             _mm256_storeu_si256((__m256i*)(rh + i), right_cnt);
+//             // acumula
+//             __m256i tot = _mm256_add_epi8(left_cnt, right_cnt);
+//             __m256i sums = _mm256_sad_epu8(tot, _mm256_setzero_si256());
+//             v_acc = _mm256_add_epi64(v_acc, sums);
+//             // chequear actividad
+//             if (!_mm256_testz_si256(active, active)) local_active = true;
+//         }
+
+//         // reducc de granos procesados
+//         uint64_t buf[4];
+//         _mm256_storeu_si256((__m256i*)buf, v_acc);
+//         uint32_t part = uint32_t(buf[0]+buf[1]+buf[2]+buf[3]);
+//         #pragma omp atomic
+//         processed += part;
+
+//         // actualizar flag global
+//         #pragma omp critical
+//         any_active |= local_active;
+
+//         // barrera para asegurar que todos terminaron
+//         #pragma omp barrier
+
+//         // sección única para fronteras periódicas
+//         #pragma omp single
+//         {
+//             uint8_t last_r = rh[N-1];
+//             std::memmove(rh+1, rh, (N-1)*sizeof(MannaItemType)); rh[0] = last_r;
+//             uint8_t first_l = lh[0];
+//             std::memmove(lh, lh+1, (N-1)*sizeof(MannaItemType)); lh[N-1] = first_l;
+//         }
+
+//         // reconstrucción paralela
+//         #pragma omp for schedule(static)
+//         for (MannaSizeType i = 0; i < N; ++i) {
+//             h[i] = lh[i] + rh[i] + (h[i]==1u ? 1u : 0u);
+//         }
+//     }
+
+//     return any_active;
+// }
+
+static bool descargar(Manna_Array &h,
+                      Manna_Array &lh,
+                      Manna_Array &rh,
+                      uint32_t  &processed)
 {
-    // 1) Inicializo acumuladores
-    std::memset(lh, 0, sizeof(Manna_Array));
-    std::memset(rh, 0, sizeof(Manna_Array));
-    __m256i v_acc_processed = _mm256_setzero_si256();
+    // reset buffers
+    std::memset(lh,0,sizeof(h));
+    std::memset(rh,0,sizeof(h));
 
-    // 2) Vectorizado de 32 elementos de 8 bits
+    bool any_active = false;
+    uint32_t local_processed = 0u;
+
+    // 1) vector loop paralelo con reducciones
+    #pragma omp parallel for reduction(||:any_active) reduction(+:local_processed) schedule(static)
     for (MannaSizeType i = 0; i < N; i += VEC_WIDTH) {
-        // a) Carga alturas h[i..i+31]
-        __m256i h_vec = _mm256_loadu_si256((__m256i*)&h[i]);
-
-        // b) Mascara de sites activos (h>1)
-        __m256i active = _mm256_cmpgt_epi8(h_vec, one);
-
-        // c) RNG bajo y alto: 16 bits para cada site
-        __m256i rnd_lo = xrng256_next();
-        __m256i rnd_hi = xrng256_next();
-
-        // d) indice hi = saturating_sub(h,8)
-        __m256i hi_idx = _mm256_subs_epu8(h_vec, v8);
-
-        // e) Lookup mascaras low/high bits
-        __m256i mask_lo = _mm256_shuffle_epi8(lo_tbl256, h_vec);
-        __m256i mask_hi = _mm256_shuffle_epi8(hi_tbl256, hi_idx);
-
-        // f) mascara bits usados
-        __m256i used_lo = _mm256_and_si256(rnd_lo, mask_lo);
-        __m256i used_hi = _mm256_and_si256(rnd_hi, mask_hi);
-
-        // g) Popcount nibble-wise para low y hi
-        __m256i pop_lo = popcount_byte_avx2(used_lo);
-        __m256i pop_hi = popcount_byte_avx2(used_hi);
-
-        // h) Conteo total y mascara activa
-        __m256i left_cnt  = _mm256_add_epi8(pop_lo, pop_hi);
-        left_cnt = _mm256_and_si256(left_cnt, active);
-
-        // i) Calculo right = h - left
-        __m256i raw_r = _mm256_sub_epi8(h_vec, left_cnt);
-        __m256i right_cnt = _mm256_and_si256(raw_r, active);
-
-        // j) Almaceno en buffers uint8_t
-        _mm256_storeu_si256((__m256i*)&lh[i], left_cnt);
-        _mm256_storeu_si256((__m256i*)&rh[i], right_cnt);
-
-        // k) Acumulo granos procesados
-        {
-            __m256i total = _mm256_add_epi8(left_cnt, right_cnt);
-            __m256i sums  = _mm256_sad_epu8(total, _mm256_setzero_si256());
-            v_acc_processed = _mm256_add_epi64(v_acc_processed, sums);
-        }
-    }
-
-    // 3) Acumulo granos procesados
-    {
+        __m256i h_vec    = _mm256_loadu_si256((__m256i*)(h + i));
+        __m256i active   = _mm256_cmpgt_epi8(h_vec, one);
+        // RNG local por hilo
+        __m256i rnd_lo   = xrng256_next();
+        __m256i rnd_hi   = xrng256_next();
+        __m256i hi_idx   = _mm256_subs_epu8(h_vec, v8);
+        __m256i mask_lo  = _mm256_shuffle_epi8(lo_tbl256, h_vec);
+        __m256i mask_hi  = _mm256_shuffle_epi8(hi_tbl256, hi_idx);
+        __m256i used_lo  = _mm256_and_si256(rnd_lo, mask_lo);
+        __m256i used_hi  = _mm256_and_si256(rnd_hi, mask_hi);
+        __m256i pop_lo   = popcount_byte_avx2(used_lo);
+        __m256i pop_hi   = popcount_byte_avx2(used_hi);
+        __m256i left_cnt  = _mm256_and_si256(_mm256_add_epi8(pop_lo,pop_hi), active);
+        __m256i right_cnt = _mm256_and_si256(_mm256_sub_epi8(h_vec,left_cnt), active);
+        _mm256_storeu_si256((__m256i*)(lh + i), left_cnt);
+        _mm256_storeu_si256((__m256i*)(rh + i), right_cnt);
+        // actualizar reducciones
         uint64_t buf[4];
-        _mm256_storeu_si256((__m256i*)buf, v_acc_processed);
-        processed += uint32_t(buf[0] + buf[1] + buf[2] + buf[3]);
+        __m256i tot = _mm256_add_epi8(left_cnt, right_cnt);
+        __m256i sums = _mm256_sad_epu8(tot, _mm256_setzero_si256());
+        _mm256_storeu_si256((__m256i*)buf, sums);
+        local_processed += uint32_t(buf[0]+buf[1]+buf[2]+buf[3]);
+        any_active |= !_mm256_testz_si256(active, active);
     }
+    // sumar al contador global
+    processed += local_processed;
 
-    // 4) Condiciones de frontera periodicas
+    // 2) frontera periódica (único hilo)
+    #pragma omp single
     {
         uint8_t last_r = rh[N-1];
-        std::memmove(rh+1, rh, (N-1)*sizeof(MannaItemType)); rh[0]=last_r;
-        uint8_t first_l= lh[0];
-        std::memmove(lh, lh+1, (N-1)*sizeof(MannaItemType)); lh[N-1]=first_l;
+        std::memmove(rh+1, rh, (N-1)*sizeof(MannaItemType)); rh[0] = last_r;
+        uint8_t first_l = lh[0];
+        std::memmove(lh, lh+1, (N-1)*sizeof(MannaItemType)); lh[N-1] = first_l;
     }
 
-    // 5) Reconstruccion - Autovectorizado
-    for (MannaSizeType i=0;i<N;++i) {
+    // 3) reconstrucción paralela
+    #pragma omp parallel for schedule(static)
+    for (MannaSizeType i = 0; i < N; ++i) {
         h[i] = lh[i] + rh[i] + (h[i]==1u ? 1u:0u);
     }
 
-    // 6) Deteccion de actividad
-    __m256i any_active = _mm256_setzero_si256();
-    for (MannaSizeType i = 0; i < N; i += VEC_WIDTH) {
-        __m256i h_vec = _mm256_load_si256((__m256i*)(h + i));
-        __m256i mask  = _mm256_cmpgt_epi8(h_vec, one);
-        any_active    = _mm256_or_si256(any_active, mask);
-    }
-
-    // true si hay alguna lane activa
-    return !_mm256_testz_si256(any_active, any_active);
+    return any_active;
 }
 
 int main() {
+    omp_set_num_threads(THREADS);
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        xrng256_init(SEED, tid);
+    }
+
     auto start = std::chrono::high_resolution_clock::now();
-    xrng256_init(SEED);
+    
     alignas(32) Manna_Array h, lh, rh;
-    bool activity;
+    bool activity = true;
     uint32_t t = 0u;
     uint32_t processed = 0u;
 
@@ -214,13 +276,90 @@ int main() {
     progreso(h, output_file);
     #endif
 
-    do {
-        activity = descargar(h, lh, rh, processed);
-        #ifdef DEBUG
-        progreso(h, output_file);
-        #endif
-        ++t;
-    } while (t < NSTEPS && activity);
+    uint32_t proc_private;
+    bool    active_private;
+
+    // Paralela única
+    #pragma omp parallel default(none) \
+        shared(h, lh, rh, processed, activity, t, proc_private, active_private)
+    {
+        do {
+            proc_private = 0;
+            active_private = false;
+
+            // 1) Vectorizado + conteo de granos + detección de actividad
+            #pragma omp for schedule(static) \
+                reduction(+:proc_private) reduction(||:active_private)
+            for (MannaSizeType i = 0; i < N; i += VEC_WIDTH) {
+                // --- Mismo cuerpo de descarga h_vec, máscaras, popcounts, stores ---
+                __m256i h_vec   = _mm256_load_si256((__m256i*)&h[i]);
+                __m256i active  = _mm256_cmpgt_epi8(h_vec, one);
+                __m256i rnd_lo  = xrng256_next();
+                __m256i rnd_hi  = xrng256_next();
+                __m256i hi_idx  = _mm256_subs_epu8(h_vec, v8);
+                __m256i mask_lo = _mm256_shuffle_epi8(lo_tbl256, h_vec);
+                __m256i mask_hi = _mm256_shuffle_epi8(hi_tbl256, hi_idx);
+                __m256i used_lo = _mm256_and_si256(rnd_lo, mask_lo);
+                __m256i used_hi = _mm256_and_si256(rnd_hi, mask_hi);
+                __m256i pop_lo  = popcount_byte_avx2(used_lo);
+                __m256i pop_hi  = popcount_byte_avx2(used_hi);
+                __m256i left    = _mm256_and_si256(
+                                      _mm256_add_epi8(pop_lo, pop_hi), active);
+                __m256i right   = _mm256_and_si256(
+                                      _mm256_sub_epi8(h_vec, left), active);
+
+                _mm256_store_si256((__m256i*)&lh[i], left);
+                _mm256_store_si256((__m256i*)&rh[i], right);
+
+                // Acumula granos procesados
+                __m256i sum8   = _mm256_sad_epu8(
+                                    _mm256_add_epi8(left, right),
+                                    _mm256_setzero_si256());
+                // extraemos a un buffer y sumamos para proc_private
+                uint64_t buf[4];
+                _mm256_store_si256((__m256i*)buf, sum8);
+                proc_private += uint32_t(buf[0] + buf[1] + buf[2] + buf[3]);
+
+                // detectamos si hay actividad en este chunk
+                if (!_mm256_testz_si256(active, active))
+                    active_private = true;
+            }
+
+            // Sincronización antes de actualizar globals
+            #pragma omp barrier
+            #pragma omp single
+            {
+                processed  += proc_private;
+                activity    = active_private;
+
+                // 2) Condiciones de frontera periódicas (una sola vez)
+                uint8_t last_r = rh[N-1];
+                std::memmove(rh+1, rh, (N-1)*sizeof(MannaItemType));
+                rh[0] = last_r;
+                uint8_t first_l = lh[0];
+                std::memmove(lh, lh+1, (N-1)*sizeof(MannaItemType));
+                lh[N-1] = first_l;
+
+                // 3) Reconstrucción en paralelo
+                // (lo aprovechamos en el siguiente barrier + for)
+            }
+            #pragma omp barrier
+
+            // 4) Reconstrucción MIMD: cada hilo suma su porción de h[]
+            #pragma omp for schedule(static)
+            for (MannaSizeType i = 0; i < N; ++i) {
+                h[i] = lh[i] + rh[i] + (h[i] == 1u ? 1u : 0u);
+            }
+
+            #pragma omp barrier
+            #pragma omp single
+            {
+                ++t;
+            }
+            #pragma omp barrier
+
+        } while (t < NSTEPS && activity);
+    }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
