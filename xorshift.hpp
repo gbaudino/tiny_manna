@@ -11,12 +11,23 @@ static thread_local uint32_t bit_buffer;
 static thread_local uint8_t  bit_count;
 
 
-inline void xrng256_init(uint32_t seed_base, int tid) {
+inline void xrng256_thread_init(uint32_t seed_base, int tid) {
     const uint32_t KNUTH = 0x9e3779b9u;
     uint32_t thread_stride = KNUTH * LANES * THREADS;
     alignas(32) uint32_t seeds[LANES];
     for(int i = 0; i < LANES; ++i) {
         seeds[i] = seed_base + thread_stride * tid + KNUTH * i;
+    }
+    xrng_state256 = _mm256_load_si256((__m256i*)seeds);
+    bit_buffer = 0;
+    bit_count  = 0;
+}
+
+inline void xrng256_init(uint32_t seed_base) {
+    const uint32_t KNUTH = 0x9e3779b9u;
+    alignas(32) uint32_t seeds[LANES];
+    for(int i = 0; i < LANES; ++i) {
+        seeds[i] = seed_base + KNUTH * i;
     }
     xrng_state256 = _mm256_load_si256((__m256i*)seeds);
     bit_buffer = 0;

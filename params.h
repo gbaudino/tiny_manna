@@ -3,7 +3,7 @@
 #include <ctime>
 
 #ifndef N
-#define N 16384u
+#define N 65536u
 #endif
 
 #ifndef DENSITY
@@ -19,7 +19,7 @@
 #endif
 
 #ifndef THREADS
-#define THREADS 1
+#define THREADS 8
 #endif
 
 // #ifndef DEBUG

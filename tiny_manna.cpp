@@ -242,7 +242,6 @@ static bool descargar(Manna_Array &h,
     }
 
     // 3) reconstrucción paralela
-    #pragma omp parallel for schedule(static)
     for (MannaSizeType i = 0; i < N; ++i) {
         h[i] = lh[i] + rh[i] + (h[i]==1u ? 1u:0u);
     }
@@ -255,15 +254,15 @@ int main() {
     #pragma omp parallel
     {
         int tid = omp_get_thread_num();
-        xrng256_init(SEED, tid);
+        xrng256_thread_init(SEED, tid);
     }
 
     auto start = std::chrono::high_resolution_clock::now();
     
     alignas(32) Manna_Array h, lh, rh;
-    bool activity = true;
+    bool activity;
     uint32_t t = 0u;
-    uint32_t processed = 0u;
+    uint32_t processed_global = 0u;
 
     inicializacion(h);
     #ifdef DEBUG
@@ -276,96 +275,98 @@ int main() {
     progreso(h, output_file);
     #endif
 
-    uint32_t proc_private;
-    bool    active_private;
+    bool any_active_global = false;
 
-    // Paralela única
-    #pragma omp parallel default(none) \
-        shared(h, lh, rh, processed, activity, t, proc_private, active_private)
+    #pragma omp parallel shared(h, processed_global, any_active_global, t)
     {
-        do {
-            proc_private = 0;
-            active_private = false;
+        int tid = omp_get_thread_num();
+        size_t chunk = N / THREADS;
+        size_t start_idx = tid * chunk;
+        size_t end_idx = start_idx + chunk;
 
-            // 1) Vectorizado + conteo de granos + detección de actividad
-            #pragma omp for schedule(static) \
-                reduction(+:proc_private) reduction(||:active_private)
-            for (MannaSizeType i = 0; i < N; i += VEC_WIDTH) {
-                // --- Mismo cuerpo de descarga h_vec, máscaras, popcounts, stores ---
-                __m256i h_vec   = _mm256_load_si256((__m256i*)&h[i]);
-                __m256i active  = _mm256_cmpgt_epi8(h_vec, one);
-                __m256i rnd_lo  = xrng256_next();
-                __m256i rnd_hi  = xrng256_next();
-                __m256i hi_idx  = _mm256_subs_epu8(h_vec, v8);
+        // buffers locales alineados
+        std::vector<MannaItemType> lh_loc(chunk), rh_loc(chunk);
+
+        bool any_active_local;
+        uint32_t processed_local;
+
+        do {
+            // reset locales y globales (por hilo)
+            any_active_local = false;
+            processed_local = 0;
+
+            // 1) Loop vectorizado sobre el chunk
+            for (size_t off = 0; off < chunk; off += VEC_WIDTH) {
+                size_t i = start_idx + off;
+                __m256i h_vec  = _mm256_loadu_si256((__m256i*)(h + i));
+                __m256i active = _mm256_cmpgt_epi8(h_vec, one);
+
+                __m256i rnd_lo = xrng256_next();
+                __m256i rnd_hi = xrng256_next();
+                __m256i hi_idx = _mm256_subs_epu8(h_vec, v8);
                 __m256i mask_lo = _mm256_shuffle_epi8(lo_tbl256, h_vec);
                 __m256i mask_hi = _mm256_shuffle_epi8(hi_tbl256, hi_idx);
                 __m256i used_lo = _mm256_and_si256(rnd_lo, mask_lo);
                 __m256i used_hi = _mm256_and_si256(rnd_hi, mask_hi);
-                __m256i pop_lo  = popcount_byte_avx2(used_lo);
-                __m256i pop_hi  = popcount_byte_avx2(used_hi);
-                __m256i left    = _mm256_and_si256(
-                                      _mm256_add_epi8(pop_lo, pop_hi), active);
-                __m256i right   = _mm256_and_si256(
-                                      _mm256_sub_epi8(h_vec, left), active);
+                __m256i pop_lo = popcount_byte_avx2(used_lo);
+                __m256i pop_hi = popcount_byte_avx2(used_hi);
+                __m256i left_cnt  = _mm256_and_si256(_mm256_add_epi8(pop_lo, pop_hi), active);
+                __m256i right_cnt = _mm256_and_si256(_mm256_sub_epi8(h_vec, left_cnt), active);
 
-                _mm256_store_si256((__m256i*)&lh[i], left);
-                _mm256_store_si256((__m256i*)&rh[i], right);
+                _mm256_storeu_si256((__m256i*)(lh_loc.data() + off), left_cnt);
+                _mm256_storeu_si256((__m256i*)(rh_loc.data() + off), right_cnt);
 
-                // Acumula granos procesados
-                __m256i sum8   = _mm256_sad_epu8(
-                                    _mm256_add_epi8(left, right),
-                                    _mm256_setzero_si256());
-                // extraemos a un buffer y sumamos para proc_private
+                // conteo
                 uint64_t buf[4];
-                _mm256_store_si256((__m256i*)buf, sum8);
-                proc_private += uint32_t(buf[0] + buf[1] + buf[2] + buf[3]);
-
-                // detectamos si hay actividad en este chunk
-                if (!_mm256_testz_si256(active, active))
-                    active_private = true;
+                __m256i tot  = _mm256_add_epi8(left_cnt, right_cnt);
+                __m256i sums = _mm256_sad_epu8(tot, _mm256_setzero_si256());
+                _mm256_storeu_si256((__m256i*)buf, sums);
+                processed_local += uint32_t(buf[0] + buf[1] + buf[2] + buf[3]);
+                any_active_local |= !_mm256_testz_si256(active, active);
             }
 
-            // Sincronización antes de actualizar globals
-            #pragma omp barrier
+            // 2) Periodicidad dentro del chunk (memmove)
+            uint8_t last_r = rh_loc[chunk - 1];
+            std::memmove(rh_loc.data() + 1, rh_loc.data(), (chunk - 1) * sizeof(MannaItemType));
+            rh_loc[0] = last_r;
+            uint8_t first_l = lh_loc[0];
+            std::memmove(lh_loc.data(), lh_loc.data() + 1, (chunk - 1) * sizeof(MannaItemType));
+            lh_loc[chunk - 1] = first_l;
+
+            // 3) Reconstrucción global por bloques
+            for (size_t off = 0; off < chunk; ++off) {
+                size_t i = start_idx + off;
+                h[i] = lh_loc[off] + rh_loc[off] + (h[i] == 1u ? 1u : 0u);
+            }
+
+            // 4) Reducciones atómicas/implicitas
+            #pragma omp critical
+            {
+                processed_global += processed_local;
+                any_active_global |= any_active_local;
+            }
+
+            
+
             #pragma omp single
             {
-                processed  += proc_private;
-                activity    = active_private;
-
-                // 2) Condiciones de frontera periódicas (una sola vez)
-                uint8_t last_r = rh[N-1];
-                std::memmove(rh+1, rh, (N-1)*sizeof(MannaItemType));
-                rh[0] = last_r;
-                uint8_t first_l = lh[0];
-                std::memmove(lh, lh+1, (N-1)*sizeof(MannaItemType));
-                lh[N-1] = first_l;
-
-                // 3) Reconstrucción en paralelo
-                // (lo aprovechamos en el siguiente barrier + for)
-            }
-            #pragma omp barrier
-
-            // 4) Reconstrucción MIMD: cada hilo suma su porción de h[]
-            #pragma omp for schedule(static)
-            for (MannaSizeType i = 0; i < N; ++i) {
-                h[i] = lh[i] + rh[i] + (h[i] == 1u ? 1u : 0u);
-            }
-
-            #pragma omp barrier
-            #pragma omp single
-            {
+                #ifdef DEBUG
+                progreso(h, output_file);
+                #endif
                 ++t;
             }
-            #pragma omp barrier
 
-        } while (t < NSTEPS && activity);
+
+        } while (any_active_global && t < NSTEPS);
     }
+
+
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "Pasos: " << t << "\n";
     std::cout << "Tiempo de procesamiento (s): " << static_cast<double>(duration.count()) / 1e6 << "\n";
-    std::cout << "Granos procesados: " << processed << "\n";
-    std::cout << "Granos/us: " << static_cast<double>(processed) / duration.count() << "\n";
+    std::cout << "Granos procesados: " << processed_global << "\n";
+    std::cout << "Granos/us: " << static_cast<double>(processed_global) / duration.count() << "\n";
     return 0;
 }
