@@ -1,17 +1,22 @@
 #!/bin/bash
+
 # Directorio para resultados
 RESULTS_DIR="benchmarks"
-mkdir -p $RESULTS_DIR
+mkdir -p "$RESULTS_DIR"
 
 # Parámetros de entrada
 DEVICE=${1:-"default"}        # Identificador de dispositivo
-OPTIMIZATION=${2:-"std"}      # Tipo de optimización
+OPTIMIZATION=${2:-"std"}       # Tipo de optimización
+CPP_FILE=${3:-"tiny_manna.cpp"} # Archivo .cpp a compilar
+
+# Nombre del ejecutable (sin extensión)
+EXE_NAME=$(basename "$CPP_FILE" .cpp)
 
 # Archivo de resultados
 RESULTS_FILE="$RESULTS_DIR/${DEVICE}_${OPTIMIZATION}.csv"
 
-# Definir array de valores N a probar y sus respectivas cantidades de ejecuciones
-N_RUNS_ARRAY=(
+# Valores de N y número de ejecuciones
+declare -a N_RUNS_ARRAY=(
   "4096:4"
   "8192:4"
   "16384:2"
@@ -21,95 +26,85 @@ N_RUNS_ARRAY=(
   "262144:1"
 )
 
-# Lista de compiladores y flags combinados
-COMPILER_FLAGS_LIST=(
-  "g++: -O3 -march=native -funroll-loops"
-  "clang++: -O2"
-  "clang++: -O3 -march=native -funroll-loops -ffast-math"
-  "icpx: -xHost -O3 -mavx2"
+# Compiladores y flags
+declare -a COMPILER_FLAGS_LIST=(
+  "g++:-O3 -march=native -funroll-loops" # -fopenmp"
+  "clang++:-O2 -march=native -mavx2" # -fopenmp"
+  "clang++:-O3 -march=native -funroll-loops -ffast-math" # -fopenmp"
+  "icpx:-xHost -O3 -mavx2" # -qopenmp"
 )
 
-# Si el archivo no existe, crear el encabezado
+# Si el archivo no existe, crear encabezado
 if [ ! -f "$RESULTS_FILE" ]; then
-  echo "N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB" > "$RESULTS_FILE"
+  echo "N,Compiler,Flags,Grains_per_us,Total_Time_s,Memory_KB" > "$RESULTS_FILE"
 fi
 
+# Bucle principal: para cada N y cada compilador/flags
 for N_RUNS in "${N_RUNS_ARRAY[@]}"; do
-  N=$(echo $N_RUNS | cut -d: -f1)
-  RUNS=$(echo $N_RUNS | cut -d: -f2)
+  N=${N_RUNS%%:*}
+  RUNS=${N_RUNS##*:}
 
-  echo "====================================="
-  echo "Probando con N = $N ($RUNS ejecuciones)"
-  echo "====================================="
-  
-  sed -i "s/^#define N .*/#define N $N/" params.h
+  echo -e "\n--- N = $N ($RUNS ejecuciones) ---"
 
-  for COMPILER_FLAGS in "${COMPILER_FLAGS_LIST[@]}"; do
-    CXX=$(echo $COMPILER_FLAGS | cut -d: -f1)
-    FLAGS=$(echo $COMPILER_FLAGS | cut -d: -f2-)
+  # Actualizar params.h si existe
+  if [ -f params.h ]; then
+    sed -i "s/^#define N .*/#define N $N/" params.h
+  fi
 
-    if ! command -v $CXX &> /dev/null; then
-      echo "Compilador $CXX no encontrado, omitiendo..."
+  for comp_pair in "${COMPILER_FLAGS_LIST[@]}"; do
+    CXX=${comp_pair%%:*}
+    FLAGS=${comp_pair#*:}
+
+    # Comprobamos compilador
+    if ! command -v "$CXX" &> /dev/null; then
+      echo "Compilador $CXX no disponible, omitiendo..."
       continue
     fi
 
-    # Verificar si la combinación ya existe en el archivo CSV
-    if grep -q "^$N,$CXX,\"$FLAGS\"," "$RESULTS_FILE"; then
-      echo "Resultados para N=$N, $CXX con flags \"$FLAGS\" ya existen. Omitiendo..."
+    # Verificar si ya existe en CSV
+    if grep -q "^${N},${CXX},\"${FLAGS}\"," "$RESULTS_FILE"; then
+      echo "Ya hay datos para N=$N, $CXX \"$FLAGS\". Omitiendo..."
       continue
     fi
 
-    BEST_GRAINS_PER_US=0
-    BEST_TIME=99999
+    # Inicializar mejores métricas
+    BEST_GRAINS=0
+    BEST_TIME=1e9
     BEST_MEM=999999999
 
-    for ((j=1; j<=$RUNS; j++)); do
-      echo "Compilando con $CXX y flags: $FLAGS (Ejecución $j/$RUNS)"
-      make clean > /dev/null 2>&1
-      OPTFLAGS="$FLAGS" CXX=$CXX make > /dev/null 2>&1
+    for ((j=1; j<=RUNS; j++)); do
+      echo -n "  Ejecutando $j/$RUNS... "
 
-      if [ ! -f tiny_manna ]; then
-        echo "Error compilando con $CXX y flags $FLAGS, omitiendo..."
-        continue
-      fi
+      # Compilar
+      $CXX $FLAGS "$CPP_FILE" -o "$EXE_NAME" || {
+        echo "Falló compilación con $CXX"; break;
+      }
 
-      echo -n "Ejecución $j/$RUNS... "
+      # Ejecutar y capturar métricas
+      OUTPUT=$(./"$EXE_NAME" 2>&1)
+      TIME_S=$(echo "$OUTPUT" | awk '/Tiempo de procesamiento/ {print $5}')
+      GRAINS=$(echo "$OUTPUT" | awk '/Granos\/us/ {print $2}')
+      MEM=$(ps -o rss= -p $$ | tr -d ' ')
 
-      OUTPUT=$(./tiny_manna 2>&1)
+      echo " Grains/µs=$GRAINS | Time=${TIME_S}s | Mem=${MEM}KB"
 
-      EXEC_TIME=$(echo "$OUTPUT" | grep "Tiempo de procesamiento" | awk '{print $5}')
-      GRAINS_PER_US=$(echo "$OUTPUT" | grep "Granos/us" | awk '{print $2}')
-      MEM_USED=$(ps -o rss= -p $$ | tr -d ' ')
-
-      echo " Grains/µs: $GRAINS_PER_US | Time: $EXEC_TIME s | Memory: ${MEM_USED} KB"
-
-      if (( $(echo "$GRAINS_PER_US > $BEST_GRAINS_PER_US" | bc -l) )); then
-        BEST_GRAINS_PER_US=$GRAINS_PER_US
-      fi
-
-      if (( $(echo "$EXEC_TIME < $BEST_TIME" | bc -l) )); then
-        BEST_TIME=$EXEC_TIME
-      fi
-
-      if (( MEM_USED < BEST_MEM )); then
-        BEST_MEM=$MEM_USED
+      # Actualizar resultados óptimos
+      awk -v g="$GRAINS" -v bg="$BEST_GRAINS" 'BEGIN{exit !(g>bg)}' && BEST_GRAINS=$GRAINS
+      awk -v t="$TIME_S" -v bt="$BEST_TIME" 'BEGIN{exit !(t<bt)}' && BEST_TIME=$TIME_S
+      if [ "$MEM" -lt "$BEST_MEM" ]; then
+        BEST_MEM=$MEM
       fi
     done
 
-    # Guardar solo si no existe en el archivo
-    echo "$N,$CXX,\"$FLAGS\",$BEST_GRAINS_PER_US,$BEST_TIME,$BEST_MEM" >> "$RESULTS_FILE"
+    # Guardar resultado final en CSV
+    echo "${N},${CXX},\"${FLAGS}\",${BEST_GRAINS},${BEST_TIME},${BEST_MEM}" \
+      >> "$RESULTS_FILE"
 
-    echo "Mejor resultado para N=$N, $CXX con flags $FLAGS:"
-    echo " - Grains/µs: $BEST_GRAINS_PER_US"
-    echo " - Tiempo total (s): $BEST_TIME"
-    echo " - Memoria (KB): $BEST_MEM"
-    echo "-----------------------------------------"
+    echo ">> Mejor para N=$N, $CXX \"$FLAGS\":"
+    echo "   Grains/µs: $BEST_GRAINS | Time: ${BEST_TIME}s | Mem: ${BEST_MEM}KB"
   done
 done
 
-make clean > /dev/null 2>&1
-
-echo -e "\nResultados guardados en $RESULTS_FILE"
+# Mostrar resultados finales
+echo -e "\n=== Benchmarks completados: ==="
 cat "$RESULTS_FILE"
-
-echo -e "\nTodos los resultados guardados en $RESULTS_FILE"

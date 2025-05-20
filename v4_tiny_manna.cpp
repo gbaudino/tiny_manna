@@ -102,7 +102,7 @@ static void desestabilizacion_inicial(Manna_Array &__restrict__ h)
         if (h[i] == 1)
         {
             h[i] = 0u;
-            MannaSizeType j = (i + 2u * xrng_next_bit_idx(0) - 1u) & (N - 1u);
+            MannaSizeType j = (i + 2u * xrng_next_bit() - 1u) & (N - 1u);
             index_a_incrementar.push_back(j);
         }
     }
