@@ -13,6 +13,7 @@ colors = {
     'UnccLightYellow': '#899064',
     'UnccBlue': '#007377',
     'UnccPink': '#DE3A6E',
+    'UnccPurple': '#A65E9E',
     'White': '#FFFFFF',
     'LightGray': '#F1E6B2'
 }

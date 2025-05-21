@@ -1,0 +1,81 @@
+N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB,Threads
+4096,g++,"-O3 -march=native -funroll-loops -fopenmp",295.328,0.920625,3584,1
+4096,clang++,"-O2 -march=native -mavx2 -fopenmp",199.217,1.36478,3584,1
+4096,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",199.718,1.36135,3584,1
+4096,icpx,"-xHost -O3 -mavx2 -qopenmp",313.094,0.868386,3584,1
+4096,g++,"-O3 -march=native -funroll-loops -fopenmp",130.801,1.99092,3584,2
+4096,clang++,"-O2 -march=native -mavx2 -fopenmp",117.239,2.22123,3584,2
+4096,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",120.093,2.16844,3584,2
+4096,icpx,"-xHost -O3 -mavx2 -qopenmp",135.2,1.92615,3584,2
+4096,g++,"-O3 -march=native -funroll-loops -fopenmp",99.3606,2.59665,3584,4
+4096,clang++,"-O2 -march=native -mavx2 -fopenmp",98.1884,2.38903,3584,4
+4096,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",103.336,2.49675,3584,4
+4096,icpx,"-xHost -O3 -mavx2 -qopenmp",112.725,2.28879,3584,4
+4096,g++,"-O3 -march=native -funroll-loops -fopenmp",68.1592,4.22798,3584,8
+4096,clang++,"-O2 -march=native -mavx2 -fopenmp",70.9827,4.0598,3584,8
+4096,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",72.0512,3.9996,3584,8
+4096,icpx,"-xHost -O3 -mavx2 -qopenmp",96.4921,2.74807,3584,8
+8192,g++,"-O3 -march=native -funroll-loops -fopenmp",237.224,0.830466,3584,1
+8192,clang++,"-O2 -march=native -mavx2 -fopenmp",183.869,1.06446,3584,1
+8192,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",184.283,1.06161,3584,1
+8192,icpx,"-xHost -O3 -mavx2 -qopenmp",255.225,0.761005,3584,1
+8192,g++,"-O3 -march=native -funroll-loops -fopenmp",170.783,1.79913,3584,2
+8192,clang++,"-O2 -march=native -mavx2 -fopenmp",166.683,1.98518,3584,2
+8192,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",161.607,2.06805,3584,2
+8192,icpx,"-xHost -O3 -mavx2 -qopenmp",175.396,1.85743,3584,2
+8192,g++,"-O3 -march=native -funroll-loops -fopenmp",176.121,3.52735,3584,4
+8192,clang++,"-O2 -march=native -mavx2 -fopenmp",147.148,3.50349,3584,4
+8192,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",175.539,3.54146,3584,4
+8192,icpx,"-xHost -O3 -mavx2 -qopenmp",174.843,3.55849,3584,4
+8192,g++,"-O3 -march=native -funroll-loops -fopenmp",123.4997,5.38923,3584,8
+8192,clang++,"-O2 -march=native -mavx2 -fopenmp",127.1544,5.1865,3584,8
+8192,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",129.1321,5.08303,3584,8
+8192,icpx,"-xHost -O3 -mavx2 -qopenmp",145.39,3.98679,3584,8
+16384,g++,"-O3 -march=native -funroll-loops -fopenmp",288.4,3.59113,3712,1
+16384,clang++,"-O2 -march=native -mavx2 -fopenmp",251.783,4.1134,3712,1
+16384,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",252.201,4.10658,3712,1
+16384,icpx,"-xHost -O3 -mavx2 -qopenmp",304.463,3.40167,3712,1
+16384,g++,"-O3 -march=native -funroll-loops -fopenmp",209.558,4.75152,3712,2
+16384,clang++,"-O2 -march=native -mavx2 -fopenmp",211.489,4.70814,3712,2
+16384,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",211.336,4.71154,3712,2
+16384,icpx,"-xHost -O3 -mavx2 -qopenmp",226.58,4.39456,3712,2
+16384,g++,"-O3 -march=native -funroll-loops -fopenmp",202.265,5.30038,3712,4
+16384,clang++,"-O2 -march=native -mavx2 -fopenmp",199.15,5.38328,3712,4
+16384,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",199.504,5.37373,3712,4
+16384,icpx,"-xHost -O3 -mavx2 -qopenmp",198.016,5.41411,3712,4
+16384,g++,"-O3 -march=native -funroll-loops -fopenmp",127.255,6.97343,3712,8
+16384,clang++,"-O2 -march=native -mavx2 -fopenmp",122.905,7.22025,3712,8
+16384,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",120.932,7.338,3712,8
+16384,icpx,"-xHost -O3 -mavx2 -qopenmp",144.778,6.12938,3712,8
+32768,g++,"-O3 -march=native -funroll-loops -fopenmp",281.453,7.35981,3712,1
+32768,clang++,"-O2 -march=native -mavx2 -fopenmp",257.581,8.04188,3712,1
+32768,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",257.403,8.04746,3712,1
+32768,icpx,"-xHost -O3 -mavx2 -qopenmp",306.401,6.76054,3712,1
+32768,g++,"-O3 -march=native -funroll-loops -fopenmp",250.379,7.9536,3712,2
+32768,clang++,"-O2 -march=native -mavx2 -fopenmp",248.038,8.02866,3712,2
+32768,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",245.301,8.11824,3712,2
+32768,icpx,"-xHost -O3 -mavx2 -qopenmp",269.079,7.40086,3712,2
+32768,g++,"-O3 -march=native -funroll-loops -fopenmp",178.371,9.52165,3712,4
+32768,clang++,"-O2 -march=native -mavx2 -fopenmp",173.166,9.80785,3712,4
+32768,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",177.752,9.5548,3712,4
+32768,icpx,"-xHost -O3 -mavx2 -qopenmp",179.746,9.4488,3712,4
+32768,g++,"-O3 -march=native -funroll-loops -fopenmp",169.95,11.1957,3712,8
+32768,clang++,"-O2 -march=native -mavx2 -fopenmp",162.699,11.6946,3712,8
+32768,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",160.322,11.868,3712,8
+32768,icpx,"-xHost -O3 -mavx2 -qopenmp",185.235,10.2718,3712,8
+65536,g++,"-O3 -march=native -funroll-loops -fopenmp",272.677,14.528,3712,1
+65536,clang++,"-O2 -march=native -mavx2 -fopenmp",251.562,15.7474,3712,1
+65536,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",247.816,15.9855,3712,1
+65536,icpx,"-xHost -O3 -mavx2 -qopenmp",288.954,13.7097,3712,1
+65536,g++,"-O3 -march=native -funroll-loops -fopenmp",280.132,14.0072,3712,2
+65536,clang++,"-O2 -march=native -mavx2 -fopenmp",264.783,14.8191,3712,2
+65536,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",266.961,14.6982,3712,2
+65536,icpx,"-xHost -O3 -mavx2 -qopenmp",286.815,13.6808,3712,2
+65536,g++,"-O3 -march=native -funroll-loops -fopenmp",232.568,16.0283,3712,4
+65536,clang++,"-O2 -march=native -mavx2 -fopenmp",224.834,16.5796,3712,4
+65536,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",225.095,16.5604,3712,4
+65536,icpx,"-xHost -O3 -mavx2 -qopenmp",229.918,16.213,3712,4
+65536,g++,"-O3 -march=native -funroll-loops -fopenmp",195.955,18.8177,3712,8
+65536,clang++,"-O2 -march=native -mavx2 -fopenmp",190.583,19.3481,3712,8
+65536,clang++,"-O3 -march=native -funroll-loops -ffast-math -fopenmp",200.293,18.4101,3712,8
+65536,icpx,"-xHost -O3 -mavx2 -qopenmp",202.946,18.1694,3712,8

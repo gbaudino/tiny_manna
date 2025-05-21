@@ -1,0 +1,25 @@
+N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB
+4096,g++,"-O3 -march=native -funroll-loops",343.349,0.791865,3712
+4096,clang++,"-O2 -march=native -mavx2",306.598,0.886786,3712
+4096,clang++,"-O3 -march=native -funroll-loops -ffast-math",310.765,0.874893,3712
+4096,icpx,"-xHost -O3 -mavx2",348.534,0.780086,3712
+8192,g++,"-O3 -march=native -funroll-loops",315.162,0.76123,3712
+8192,clang++,"-O2 -march=native -mavx2",292.261,0.851904,3712
+8192,clang++,"-O3 -march=native -funroll-loops -ffast-math",295.294,0.838672,3712
+8192,icpx,"-xHost -O3 -mavx2",317.006,0.754759,3712
+16384,g++,"-O3 -march=native -funroll-loops",307.325,3.37,3712
+16384,clang++,"-O2 -march=native -mavx2",282.277,3.66903,3712
+16384,clang++,"-O3 -march=native -funroll-loops -ffast-math",285.975,3.62159,3712
+16384,icpx,"-xHost -O3 -mavx2",301.023,3.44054,3712
+32768,g++,"-O3 -march=native -funroll-loops",297.987,6.95145,3712
+32768,clang++,"-O2 -march=native -mavx2",271.231,7.63717,3712
+32768,clang++,"-O3 -march=native -funroll-loops -ffast-math",273.506,7.57364,3712
+32768,icpx,"-xHost -O3 -mavx2",294.584,7.03175,3712
+65536,g++,"-O3 -march=native -funroll-loops",242.952,16.3055,3712
+65536,clang++,"-O2 -march=native -mavx2",202.997,19.5149,3712
+65536,clang++,"-O3 -march=native -funroll-loops -ffast-math",199.997,19.8076,3712
+65536,icpx,"-xHost -O3 -mavx2",243.37,16.2775,3712
+2048,g++,"-O3 -march=native -funroll-loops",430.154,0.058183,3712
+2048,clang++,"-O2 -march=native -mavx2",396.183,0.063172,3712
+2048,clang++,"-O3 -march=native -funroll-loops -ffast-math",401.258,0.062373,3712
+2048,icpx,"-xHost -O3 -mavx2",441.382,0.056703,3712

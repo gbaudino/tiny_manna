@@ -3,7 +3,7 @@
 #include <ctime>
 
 #ifndef N
-#define N 65536u
+#define N 65536
 #endif
 
 #ifndef DENSITY
