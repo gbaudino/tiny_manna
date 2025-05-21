@@ -1,10 +1,4 @@
 N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB
-2048,g++," -O3 -march=native -funroll-loops",102.406,0.360915,3712
-2048,g++," -Ofast -march=native -funroll-loops -ffast-math",41.5539,0.889445,3712
-2048,clang++," -O2",100.272,0.368595,3712
-2048,clang++," -O3 -march=native -funroll-loops -ffast-math",109.101,0.338768,3712
-2048,icpx," -xHost -O3 -mavx2",96.0501,0.384798,3712
-2048,nvc++," -O3",45.9613,0.804152,3712
 4096,g++," -O3 -march=native -funroll-loops",102.69,1.22432,3712
 4096,g++," -Ofast -march=native -funroll-loops -ffast-math",42.0317,2.9912,3712
 4096,clang++," -O2",100.802,1.24725,3712

@@ -1,16 +1,4 @@
 N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB
-2048,g++,"",7.79834,2.869741449,3456
-2048,g++,"-O2",51.56092,0.434034487,3456
-2048,g++,"-O3 -march=native",57.64373,0.388233329,3456
-2048,clang++,"",7.75733,2.884909428,3456
-2048,clang++,"-O2",50.70155,0.441391231,3584
-2048,clang++,"-O3 -march=native",52.20737,0.428660172,3584
-2048,icpx,"",45.41845,0.492734103,3584
-2048,icpx,"-O2",45.32127,0.493790599,3584
-2048,icpx,"-O3 -march=native",46.63563,0.479873806,3584
-2048,nvc++,"",8.99940,2.486744472,5376
-2048,nvc++,"-O2",49.77078,0.449645729,5376
-2048,nvc++,"-O3 -march=native",49.70626,0.450229341,6400
 4096,g++,"",6.83033,41.332847181,3584
 4096,g++,"-O2",49.02213,5.758970148,3584
 4096,g++,"-O3 -march=native",55.54077,5.083058625,3584
@@ -47,11 +35,6 @@ N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB
 16384,nvc++,"",6.40826,139.324128617,5760
 16384,nvc++,"-O2",41.28910,21.623771514,5760
 16384,nvc++,"-O3 -march=native",41.26060,21.638705769,6656
-2048,g++,"-O3 -march=native -funroll-loops",43.3996,0.216706,3584
-2048,g++,"-Ofast -march=native -funroll-loops -ffast-math",43.4947,0.216232,3584
-2048,clang++,"-O3 -march=native -funroll-loops -ffast-math",48.9994,0.19194,3584
-2048,icpx,"-xHost -O3",42.443,0.22159,3584
-2048,nvc++,"-O3",45.1781,0.208175,3584
 4096,g++,"-O3 -march=native -funroll-loops",40.8437,0.248385,3584
 4096,g++,"-Ofast -march=native -funroll-loops -ffast-math",40.7973,0.248667,3584
 4096,clang++,"-O3 -march=native -funroll-loops -ffast-math",46.9007,0.216307,3584
@@ -77,11 +60,6 @@ N,Compiler,Flags,Grains/µs,Total_Time(s),Memory_KB
 32768,icpx,"-xHost -O3",27.4959,7.70612,3584
 32768,nvc++,"",3.11704,67.9769,3584
 32768,nvc++," -O3",25.6645,8.25601,3584
-2048,g++," -O3 -march=native -funroll-loops",43.3759,0.216824,3584
-2048,g++," -Ofast -march=native -funroll-loops -ffast-math",43.2095,0.217659,3584
-2048,clang++," -O2",46.8418,0.200781,3584
-2048,clang++," -O3 -march=native -funroll-loops -ffast-math",48.4451,0.194136,3584
-2048,nvc++," -O3",45.0772,0.208641,3584
 4096,g++," -O3 -march=native -funroll-loops",40.6952,0.249291,3584
 4096,g++," -Ofast -march=native -funroll-loops -ffast-math",40.5892,0.249942,3584
 4096,clang++," -O2",44.7472,0.226717,3584
