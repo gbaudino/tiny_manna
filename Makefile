@@ -1,49 +1,43 @@
-# Compiler
-CXX ?= clang++
+NVCC = nvcc
+CFLAGS = -std=c++17 -O3 -arch=sm_61 --use_fast_math -lineinfo
+LIBS =
 
-# Default Flags
-OPTFLAGS ?= -O3 -march=native -mavx2 -g -fno-omit-frame-pointer -fopenmp
-CXXFLAGS = $(OPTFLAGS) -Wall -Wextra -std=c++17
-CPPFLAGS =
-LDFLAGS =
+# Targets
+TARGET = manna_cuda
+SOURCE = manna_cuda.cu
 
-# Binary file
-TARGET = tiny_manna
+all: $(TARGET)
 
-# Files
-SOURCES = tiny_manna.cpp
-OBJS = $(patsubst %.cpp, %.o, $(SOURCES))
+$(TARGET): $(SOURCE) params.h
+	$(NVCC) $(CFLAGS) $(SOURCE) -o $(TARGET) $(LIBS)
 
-# Rules
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+# Profiling targets
+profile: $(TARGET)
+	nvprof ./$(TARGET)
 
+profile-detailed: $(TARGET)
+	nvprof --print-gpu-trace --print-api-trace ./$(TARGET)
+
+profile-metrics: $(TARGET)
+	nvprof --metrics achieved_occupancy,gld_throughput,gst_throughput,branch_efficiency ./$(TARGET)
+
+# Debugging
+debug: CFLAGS += -g -G
+debug: $(TARGET)
+
+# Clean
 clean:
-	rm -f $(TARGET) *.o $(TARGET).s $(TARGET).ii $(TARGET).gcda $(TARGET).bc $(TARGET).l* $(TARGET).r* $(TARGET).w*
+	rm -f $(TARGET)
 
-clean_old:
-	rm -f old_$(TARGET) *.o *.dat old_$(TARGET).s old_$(TARGET).ii old_$(TARGET).gcda old_$(TARGET).bc old_$(TARGET).l* old_$(TARGET).r* old_$(TARGET).w*
+# Test different block sizes
+test-blocks: $(TARGET)
+	@echo "Testing different block sizes..."
+	@for bs in 128 256 512 1024; do \
+		echo "Block size: $$bs"; \
+		sed -i "s/block_size(.*)/block_size($$bs)/" $(SOURCE); \
+		$(MAKE) $(TARGET) > /dev/null 2>&1; \
+		./$(TARGET) | grep "Granos/us"; \
+		echo ""; \
+	done
 
-.PHONY: run perf force clang
-
-run: $(TARGET)
-	./$(TARGET)
-
-run_old: old_$(TARGET)
-	./old_$(TARGET)
-
-force: clean $(TARGET)
-
-perf: force
-	perf record -F 1000 -g -- ./$(TARGET)
-	perf report -i perf.data
-
-clang: clean
-	make $(TARGET) CXX=clang++
-	./$(TARGET)
-
-perf_file: force
-	perf stat -r 3 -o performance.txt --append -e cache-references,cache-misses,instructions,cycles,task-clock ./$(TARGET)
-
-max:
-	grep -o 'max=[0-9]\+' sand.dat | cut -d= -f2 | sort -n | tail -1
+.PHONY: all profile profile-detailed profile-metrics debug clean test-blocks

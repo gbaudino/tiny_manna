@@ -3,7 +3,7 @@
 #include <ctime>
 
 #ifndef N
-#define N 65536
+constexpr size_t N = 32768;
 #endif
 
 #ifndef DENSITY
@@ -18,8 +18,12 @@
 #define SEED 1 // 1 if you want fixed seed
 #endif
 
-#ifndef THREADS
-#define THREADS 8
+// #ifndef THREADS
+// #define THREADS 4
+// #endif
+
+#ifndef BLOCK_SIZE
+#define BLOCK_SIZE 256
 #endif
 
 // #ifndef DEBUG

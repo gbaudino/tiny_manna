@@ -218,8 +218,6 @@ int main() {
             }
             if (!any_active_global || t >= NSTEPS)
                     break;
-
-            #pragma omp barrier
         }
     }
 
