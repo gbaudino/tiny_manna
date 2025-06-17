@@ -3,7 +3,7 @@
 #include <ctime>
 
 #ifndef N
-constexpr size_t N = 32768;
+constexpr size_t N = 8192;
 #endif
 
 #ifndef DENSITY
