@@ -36,13 +36,26 @@ declare -a N_RUNS_ARRAY=(
     "65536:4"
 )
 
-# Compiladores y flags
-declare -a COMPILER_FLAGS_LIST=(
-    "g++:-O3 -march=native -funroll-loops -fopenmp"
-    "clang++:-O2 -march=native -mavx2 -fopenmp"
-    "clang++:-O3 -march=native -funroll-loops -ffast-math -fopenmp"
-    "icpx:-xHost -O3 -mavx2 -qopenmp"
-)
+# Compiladores y flags según la versión
+if [ "$HAS_THREADS" = true ]; then
+    # Para versiones v6/v7 con soporte de threads (necesitan OpenMP)
+    declare -a COMPILER_FLAGS_LIST=(
+        "g++:-O3 -march=native -funroll-loops -fopenmp"
+        "clang++:-O2 -march=native -mavx2 -fopenmp -lomp"
+        "clang++:-O3 -march=native -funroll-loops -ffast-math -fopenmp -lomp"
+        "icpx:-xHost -O3 -mavx2 -qopenmp"
+    )
+    echo "Usando flags con OpenMP para versión con threads"
+else
+    # Para versiones anteriores sin threads (sin OpenMP)
+    declare -a COMPILER_FLAGS_LIST=(
+        "g++:-O3 -march=native -funroll-loops"
+        "clang++:-O2 -march=native -mavx2"
+        "clang++:-O3 -march=native -funroll-loops -ffast-math"
+        "icpx:-xHost -O3 -mavx2"
+    )
+    echo "Usando flags sin OpenMP para versión sin threads"
+fi
 
 # Encabezado CSV si no existe
 if [ ! -f "$RESULTS_FILE" ]; then
@@ -88,7 +101,15 @@ for N_RUNS in "${N_RUNS_ARRAY[@]}"; do
             echo " * Probando con THREADS=$THREADS"
             # Actualizar THREADS en params.h
             if [ -f params.h ]; then
-                sed -i "s/^#define THREADS .*/#define THREADS $THREADS/" params.h
+                # Buscar si existe el patrón nuevo (constexpr size_t THREADS = ...)
+                if grep -q "constexpr.*THREADS =" params.h; then
+                    sed -i "s/^constexpr.*THREADS = [0-9]\+;/constexpr size_t THREADS = $THREADS;/" params.h
+                # Buscar si existe el patrón viejo (#define THREADS ...)
+                elif grep -q "^#define THREADS " params.h; then
+                    sed -i "s/^#define THREADS .*/#define THREADS $THREADS/" params.h
+                else
+                    echo "     Advertencia: No se encontró definición de THREADS en params.h"
+                fi
             fi
         else
             echo " * Ejecutando sin configuración de THREADS"
@@ -126,10 +147,15 @@ for N_RUNS in "${N_RUNS_ARRAY[@]}"; do
             for ((j=1; j<=RUNS; j++)); do
                 echo -n "   Ejecutando $j/$RUNS… "
                 
-                $CXX $FLAGS "$CPP_FILE" -o "$EXE_NAME" || {
-                    echo "Falló compilación con $CXX"
+                echo "   Compilando: $CXX $FLAGS $CPP_FILE -o $EXE_NAME"
+                COMPILE_OUTPUT=$($CXX $FLAGS "$CPP_FILE" -o "$EXE_NAME" 2>&1)
+                if [ $? -ne 0 ]; then
+                    echo "   ERROR: Falló compilación con $CXX"
+                    echo "   Comando: $CXX $FLAGS $CPP_FILE -o $EXE_NAME"
+                    echo "   Salida del error:"
+                    echo "$COMPILE_OUTPUT" | sed 's/^/     /'
                     break
-                }
+                fi
                 
                 # Ejecutar con o sin OMP_NUM_THREADS según la versión
                 if [ "$HAS_THREADS" = true ]; then
