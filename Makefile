@@ -1,5 +1,5 @@
 NVCC = nvcc
-CFLAGS = -std=c++17 -O3 -arch=sm_61 --use_fast_math -lineinfo
+CFLAGS = -std=c++17 -O3 -arch=sm_61 --use_fast_math --extra-device-vectorization -lineinfo
 LIBS =
 
 # Targets

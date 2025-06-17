@@ -1,5 +1,5 @@
 #include "params.h"
-#include "xorshift.hpp"
+#include "avx_xorshift.hpp"
 
 #include <cstdlib>
 #include <cstdint>
@@ -10,7 +10,8 @@
 #include <cstring>
 #include <immintrin.h>
 
-#if N < 65536u
+constexpr size_t reference = 65536u;
+#if N < reference
 typedef uint16_t MannaSizeType;
 #else
 typedef uint32_t MannaSizeType;

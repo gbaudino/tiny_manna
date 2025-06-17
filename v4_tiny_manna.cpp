@@ -1,5 +1,5 @@
 #include "params.h"
-#include "xorshift.hpp"
+#include "avx_xorshift.hpp"
 
 #include <cstdlib>
 #include <cstdint>
